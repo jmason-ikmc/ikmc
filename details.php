@@ -526,8 +526,8 @@ if ( $response && $response->getHttpStatus() == 200 ) {
                         <? if (($productpipeline == 'KOMP-CSD' || $productpipeline == 'KOMP-Regeneron') && $productid == $programs[$i]["pid"] && $producttype=="Mouse available") : ?>
                         <a target="_blank" class="orderlink" href="http://www.komp.org/geneinfo.php?MGI_Number=<?=str_replace("MGI:","", $doc->mgiid)?>">Order <?=str_replace(" available","",$producttype)?> &raquo;</a>
                         <? endif; ?>
-                        <? if ($productpipeline == 'EUCOMM' && $programs[$i]["name"] == "EUCOMM" && stristr($producttype, "mouse")) : ?>
-                        <a target="_blank" class="orderlink" href="http://www.eummcr.org/order.php">Order mice &raquo;</a>
+                        <? if ($productpipeline == 'EUCOMM' && $programs[$i]["name"] == "EUCOMM" && $productid == $programs[$i]["pid"] && $producttype=="Mouse available") : ?>
+                        <a target="_blank" class="orderlink" href="http://www.emmanet.org/apps/springEmma/search?keyword=<?=$doc->symbol?>%25EUCOMM&select_by=InternationalStrainName&search=ok">Order mice &raquo;</a>
                         <? endif; ?>
                     <? endforeach; ?>
                     <? endif; ?>
@@ -565,7 +565,7 @@ if ( $response && $response->getHttpStatus() == 200 ) {
             <div style="display:none;" id="proj-row-<?=($programs[$i]["pid"]) ? $programs[$i]["pid"] : $programs[$i]["name"]?>">
             <a href="#" onclick="document.getElementById('proj-row-<?= ($programs[$i]["pid"]) ? $programs[$i]["pid"] : $programs[$i]["name"] ?>').style.display='none';return false;" style="float:right;color:red;font-size:120%;">close</a>
             <? if ($programs[$i]["name"] == 'KOMP-CSD' || $programs[$i]["name"] == 'EUCOMM'): ?>
-            <a target="_blank" href="http://www.sanger.ac.uk/htgt/report/gene_report?project_id=<?=$programs[$i]["pid"]?>" style="float:left;font-size:120%; margin-right: 10px;">View this project at CSD</a>
+            <a target="_blank" href="http://www.sanger.ac.uk/htgt/report/gene_report?project_id=<?=$programs[$i]["pid"]?>" style="float:left;font-size:120%; margin-right: 10px;">View this project</a>
             <iframe width="955" height="200" src="http://www.i-dcc.org/dev/allele_pages/<?=$programs[$i]["pid"]?>.html"></iframe>
             <? elseif ($programs[$i]["name"] == 'KOMP-Regeneron'): ?>
             <a  target="_blank" href="http://www.velocigene.com/komp/detail/<?=str_replace("VG","",$programs[$i]["pid"])?>" style="float:left;font-size:120%; margin-right: 10px;">View this project at Regeneron</a>

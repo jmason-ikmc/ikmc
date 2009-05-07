@@ -29,7 +29,7 @@ function formatAvailabilityString ($input, $doc) {
             } elseif ($product == 'ES') {
                 $url = '<a href="http://www.eummcr.org/order.php">Order ES cells &raquo;</a><br />';
             } elseif ($product == 'Mice') {
-                $url = '<a target="_blank" class="orderlink" href="http://www.eummcr.org/order.php">Order mice &raquo;</a>';
+                $url = '<a href="http://www.emmanet.org/apps/springEmma/search?keyword='.$doc->symbol.'%25EUCOMM&select_by=InternationalStrainName&search=ok">Order mice &raquo;</a>';
             }
         break;
         default:
