@@ -219,7 +219,7 @@ $REGNSTATUSES = array(
 require_once('Apache/Solr/Service.php');
 
 // Instance a new solr object
-$solr = new Apache_Solr_Service( 'prototype.knockoutmouse.org', '8983', '/solr' );
+$solr = new Apache_Solr_Service( 'prototype.knockoutmouse.org', '80', '/' );
 
 // Query the solr service
 if ($_GET['mgiid']) {
