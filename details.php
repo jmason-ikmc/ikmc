@@ -57,7 +57,7 @@ $EUCOMMSTATUSES = $CSDSTATUSES;
 $NORCOMMSTATUSES = $CSDSTATUSES;
 
 $TIGMSTATUSES = array(
-    'Gene traps available'=>array('name'=>'Gene traps available', 'sequence'=>5, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'escell')
+    'Gene traps available'=>array('name'=>'Gene traps available', 'sequence'=>91, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'escell')
 );
 
 $REGNSTATUSES = array(
@@ -73,6 +73,24 @@ $REGNSTATUSES = array(
     'ES Cell Clone Microinjected'=>array('name'=>'ES Cell Clone Microinjected', 'sequence'=>50, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'escell'),
     'Germline Transmission Achieved'=>array('name'=>'Germline Transmission Achieved', 'sequence'=>55, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'mice')
 );
+
+
+$REGNSTATUSES = array(
+    'Regeneron Selected'=>array('name'=>'Regeneron Selected', 'sequence'=>5, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'prepipeline'),
+    'Design Finished/Oligos Ordered'=>array('name'=>'Design Finished/Oligos Ordered', 'sequence'=>50, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'design'),
+    'Parental BAC Obtained'=>array('name'=>'Parental BAC Obtained', 'sequence'=>55, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'vector'),
+    'Targeting Vector QC Completed'=>array('name'=>'Targeting Vector QC Completed', 'sequence'=>75, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'vector'),
+    'Vector Electroporated into ES Cells'=>array('name'=>'Vector Electroporated into ES Cells', 'sequence'=>80, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'vector'),
+    'ES cell colonies picked'=>array('name'=>'ES cell colonies picked', 'sequence'=>81, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'escell'),
+    'ES cell colonies screened / QC no positives'=>array('name'=>'ES cell colonies screened / QC no positives', 'sequence'=>85, 'terminal'=>FALSE, 'warning'=>TRUE, 'category'=>'escell'),
+    'ES cell colonies screened / QC one positive'=>array('name'=>'ES cell colonies screened / QC one positive', 'sequence'=>93, 'terminal'=>FALSE, 'warning'=>TRUE, 'category'=>'escell'),
+    'ES cell colonies screened / QC positives'=>array('name'=>'ES cell colonies screened / QC positives', 'sequence'=>95, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'escell'),
+    'ES Cell Clone Microinjected'=>array('name'=>'ES Cell Clone Microinjected', 'sequence'=>100, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'escell'),
+    'Germline Transmission Achieved'=>array('name'=>'Germline Transmission Achieved', 'sequence'=>110, 'terminal'=>FALSE, 'warning'=>FALSE, 'category'=>'mice')
+);
+
+
+
 
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -201,7 +219,7 @@ $REGNSTATUSES = array(
 require_once('Apache/Solr/Service.php');
 
 // Instance a new solr object
-$solr = new Apache_Solr_Service( 'rohan.informatics.jax.org', '8983', '/solr' );
+$solr = new Apache_Solr_Service( 'prototype.knockoutmouse.org', '8983', '/solr' );
 
 // Query the solr service
 if ($_GET['mgiid']) {
@@ -210,6 +228,48 @@ if ($_GET['mgiid']) {
     print "Missing MGI ID";
 }
 
+// sequence sorting
+function so ($a, $b) { 
+
+    // Sort by product score first
+    // 0 = no product
+    // 1 = vectors available
+    // 2 = es cells available
+    // 3 = mice available
+    if ($a['score']<$b['score']) {
+        return 1;
+    } else if ($a['score']>$b['score']) {
+        return -1;
+    } else {
+        if ($a['sequence']<$b['sequence']) {
+            return 1;
+        } else if ($a['sequence']>$b['sequence']) {
+            return -1;
+        } else {
+            return 0;
+        }
+    }
+}
+
+function calculateProductScore($allproducts, $pid) {
+    $score = 0;
+    if ($allproducts) {
+        $products = is_array($allproducts) ? $allproducts : array($allproducts);
+        foreach ($products as $product) {
+            list($productid, $productpipeline, $producttype) = explode("||", $product);
+            if ($productid == $pid) {
+                if ($producttype == 'Mouse available') {
+                    $score = 3;
+                } else if ($producttype == 'ES Cell available' and $score < 2) {
+                    $score = 2;
+                } else if ($producttype == 'Vector available' and $score < 1) {
+                    $score = 1;
+                }
+            }
+        }
+    }
+    return $score;
+}
 // Print the results in a table
 if ( $response && $response->getHttpStatus() == 200 ) { 
     if ( $response->response->numFound > 0 ) {
@@ -224,34 +284,44 @@ if ( $response && $response->getHttpStatus() == 200 ) {
             $pros = is_array($doc->CSD_project) ? $doc->CSD_project : array($doc->CSD_project);
             foreach ($pros as $pro) {
                 list($pid,$status,$datetime) = explode("||", $pro);
-                array_push($programs, array("name"=>"KOMP-CSD", "value"=>$status, "pid"=>$pid));                
+                $productscore = calculateProductScore($doc->available_product_display, $pid);
+                array_push($programs, array("name"=>"KOMP-CSD", "value"=>$status, "pid"=>$pid, "sequence"=>$CSDSTATUSES[$status]['sequence'], "score"=>$productscore, 'terminal'=>$CSDSTATUSES[$status]['terminal']));
             }
         }
         if ($doc->Regeneron_project) {
             $pros = is_array($doc->Regeneron_project) ? $doc->Regeneron_project : array($doc->Regeneron_project);
             foreach ($pros as $pro) {
                 list($pid,$status,$datetime) = explode("||", $pro);
-                array_push($programs, array("name"=>"KOMP-Regeneron", "value"=>$status, "pid"=>$pid));                
+                $productscore = calculateProductScore($doc->available_product_display, $pid);
+                array_push($programs, array("name"=>"KOMP-Regeneron", "value"=>$status, "pid"=>$pid, "sequence"=>$REGNSTATUSES[$status]['sequence'], "score"=>$productscore, 'terminal'=>$REGNSTATUSES[$status]['terminal']));                
             }
         }
         if ($doc->EUCOMM_project) {
             $pros = is_array($doc->EUCOMM_project) ? $doc->EUCOMM_project : array($doc->EUCOMM_project);
             foreach ($pros as $pro) {
                 list($pid,$status,$datetime) = explode("||", $pro);
-                array_push($programs, array("name"=>"EUCOMM", "value"=>$status, "pid"=>$pid));
+                $productscore = calculateProductScore($doc->available_product_display, $pid);
+                array_push($programs, array("name"=>"EUCOMM", "value"=>$status, "pid"=>$pid, "sequence"=>$EUCOMMSTATUSES[$status]['sequence'], "score"=>$productscore, 'terminal'=>$EUCOMMSTATUSES[$status]['terminal']));
             }
         }
         if ($doc->NorCOMM_project) {
             $pros = is_array($doc->NorCOMM_project) ? $doc->NorCOMM_project : array($doc->NorCOMM_project);
             foreach ($pros as $pro) {
                 list($pid,$status,$datetime) = explode("||", $pro);
-                array_push($programs, array("name"=>"NorCOMM", "value"=>$status, "pid"=>$pid));                
+                $productscore = calculateProductScore($doc->available_product_display, $pid);
+                array_push($programs, array("name"=>"NorCOMM", "value"=>$status, "pid"=>$pid, "sequence"=>$NORCOMMSTATUSES[$status]['sequence'], "score"=>$productscore, 'terminal'=>$NORCOMMSTATUSES[$status]['terminal']));                
             }
         }
 
         if ($doc->tigm) {
-            array_push($programs, array("name"=>"TIGM", "value"=>"Gene traps available"));
+            $productscore = 1.5;
+            array_push($programs, array("name"=>"TIGM", "value"=>"Gene traps available", "sequence"=>$TIGMSTATUSES["Gene traps available"]['sequence'], "score"=>$productscore));
         }
+
+        usort($programs, 'so');
+//        print "<pre>\n";
+//        print_r($programs);
+//        print "</pre>\n";
 
 // Uncomment to see the  solr response
 //echo "\n<!--\n"; print_r($doc); echo "\n-->\n";
@@ -540,7 +610,7 @@ if ( $response && $response->getHttpStatus() == 200 ) {
 
             </td>
             <td width="5%">
-            <? if ($programs[$i]["name"] == 'KOMP-CSD' || $programs[$i]["name"] == 'KOMP-Regeneron' || $programs[$i]["name"] == 'EUCOMM') : ?>
+            <? if ((($programs[$i]["name"] == 'KOMP-CSD' || $programs[$i]["name"] == 'EUCOMM') && $programs[$i]["sequence"] >= 75) || $programs[$i]["name"] == 'KOMP-Regeneron' ) : ?>
             <a class="ext" target=_blank" href="#" onclick="document.getElementById('proj-row-<?=($programs[$i]["pid"]) ? $programs[$i]["pid"] : $programs[$i]["name"]?>').style.display='block';return false;">Allele Details</a>
             <? endif; ?>
             <? if ($programs[$i]["name"] == 'TIGM'): ?>
@@ -560,20 +630,22 @@ if ( $response && $response->getHttpStatus() == 200 ) {
             <? endif; ?>
             </td>
             </tr>
+            <? if ((($programs[$i]["name"] == 'KOMP-CSD' || $programs[$i]["name"] == 'EUCOMM') && $programs[$i]["sequence"] >= 75) || $programs[$i]["name"] == 'KOMP-Regeneron' ) : ?>
             <tr bgcolor="<?= $bgcolor ?>">
-            <td colspan="3">
-            <div style="display:none;" id="proj-row-<?=($programs[$i]["pid"]) ? $programs[$i]["pid"] : $programs[$i]["name"]?>">
-            <a href="#" onclick="document.getElementById('proj-row-<?= ($programs[$i]["pid"]) ? $programs[$i]["pid"] : $programs[$i]["name"] ?>').style.display='none';return false;" style="float:right;color:red;font-size:120%;">close</a>
-            <? if ($programs[$i]["name"] == 'KOMP-CSD' || $programs[$i]["name"] == 'EUCOMM'): ?>
-            <a target="_blank" href="http://www.sanger.ac.uk/htgt/report/gene_report?project_id=<?=$programs[$i]["pid"]?>" style="float:left;font-size:120%; margin-right: 10px;">View this project</a>
-            <iframe width="955" height="200" src="http://www.i-dcc.org/dev/allele_pages/<?=$programs[$i]["pid"]?>.html"></iframe>
-            <? elseif ($programs[$i]["name"] == 'KOMP-Regeneron'): ?>
-            <a  target="_blank" href="http://www.velocigene.com/komp/detail/<?=str_replace("VG","",$programs[$i]["pid"])?>" style="float:left;font-size:120%; margin-right: 10px;">View this project at Regeneron</a>
-            <img src="images/regn_design.png" />
-            <? endif; ?>
-            </div>
-            </td>
+                <td colspan="3">
+                <div style="display:none;" id="proj-row-<?=($programs[$i]["pid"]) ? $programs[$i]["pid"] : $programs[$i]["name"]?>">
+                <a href="#" onclick="document.getElementById('proj-row-<?= ($programs[$i]["pid"]) ? $programs[$i]["pid"] : $programs[$i]["name"] ?>').style.display='none';return false;" style="float:right;color:red;font-size:120%;">close</a>
+                <? if (($programs[$i]["name"] == 'KOMP-CSD' || $programs[$i]["name"] == 'EUCOMM') && $programs[$i]["sequence"] >= 75): ?>
+                <a target="_blank" href="http://www.sanger.ac.uk/htgt/report/gene_report?project_id=<?=$programs[$i]["pid"]?>" style="float:left;font-size:120%; margin-right: 10px;">View this project</a>
+                <iframe width="955" height="200" src="http://www.i-dcc.org/dev/allele_pages/<?=$programs[$i]["pid"]?>.html"></iframe>
+                <? elseif ($programs[$i]["name"] == 'KOMP-Regeneron'): ?>
+                <a  target="_blank" href="http://www.velocigene.com/komp/detail/<?=str_replace("VG","",$programs[$i]["pid"])?>" style="float:left;font-size:120%; margin-right: 10px;">View this project at Regeneron</a>
+                <img src="images/regn_design.png" />
+                <? endif; ?>
+                </div>
+                </td>
             </tr>
+            <? endif; ?>
             <? endfor; ?>
         <? endif; ?>
         
