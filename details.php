@@ -28,6 +28,7 @@ $PIPELINE_STATES = array(
 );
 
 $CSDSTATUSES = array(
+    'Transferred to NorCOMM'=>array('name'=>'Transferred to NorCOMM', 'sequence'=>4, 'terminal'=>TRUE, 'warning'=>FALSE, 'category'=>'prepipeline'),
     'Transferred to KOMP'=>array('name'=>'Transferred to KOMP', 'sequence'=>5, 'terminal'=>TRUE, 'warning'=>FALSE, 'category'=>'prepipeline'),
     'On Hold'=>array('name'=>'On Hold', 'sequence'=>10, 'terminal'=>FALSE, 'warning'=>TRUE, 'category'=>'prepipeline'),
     'Withdrawn From Pipeline'=>array('name'=>'Withdrawn From Pipeline', 'sequence'=>25, 'terminal'=>TRUE, 'warning'=>FALSE, 'category'=>'prepipeline'),
